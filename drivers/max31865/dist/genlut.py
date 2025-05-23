@@ -21,14 +21,15 @@ parser = argparse.ArgumentParser(prog='genlut.py',
 parser.add_argument("LUTNAME", help="Suffix of the LUT name."
                     " For example, if LUTNAME is 'mylut', the header"
                     " file will be named 'max31865_mylut.h', the"
-                    " LUT variable will be named 'max31865_mylut'"
-                    " and the number of lines in the LUT will be named 'max31865_mylut_numlines'.")
+                    " LUT variable will be named 'max31865_mylut' and the number of lines"
+                    " in the LUT will be defined as 'MAX31865_MYLUT_NUMLINES'.")
 parser.add_argument("RTD0", help="RTD resistance at 0°C (ohm).")
 parser.add_argument("RREF", help="Reference resistance (ohm).")
 parser.add_argument("TMIN", help="Minimum temperature of the LUT (°C). TMIN >= -200°C.")
 parser.add_argument("TMAX", help="Maximum temperature of the LUT (°C). TMAX =< 850°C.")
 args = parser.parse_args()
 
+args.LUTNAME = args.LUTNAME.lower()
 rtd0 = float(args.RTD0)
 rref = float(args.RREF)
 tmin = round(float(args.TMIN), -1)      # round to tens of ohm
@@ -117,8 +118,8 @@ extern "C" {
 ''', file=f)
 
     print('''/** Number of lines in #max31865_{LUT} */'''.format(LUT=args.LUTNAME), file=f)
-    macro_name = "MAX31865_" + args.LUTNAME.upper()
-    print("#define %s        (%d)\n" % (macro_name, nrows), file=f)
+    macro_name = "MAX31865_" + args.LUTNAME.upper() + "_NUMLINES"
+    print("#define %s        (ARRAY_SIZE(max31865_lut_def))" % (macro_name), file=f)
 
     print('''\
 /**

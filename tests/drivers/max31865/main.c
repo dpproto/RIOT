@@ -21,31 +21,13 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-#ifdef SPI0_CS0
-/* use the default device and CS pin for ESP32 boards */
-#  define MAX31865_PARAM_PARAM_SPI    (SPI_DEV(0))
-#  define MAX31865_PARAM_PARAM_CS_PIN (SPI0_CS0)
-#else
-/* on non-ESP32 boards, the user must adapt the following 2 parameters */
-#  define MAX31865_PARAM_PARAM_SPI    (SPI_DEV(0))
-#  define MAX31865_PARAM_PARAM_CS_PIN GPIO_PIN(0, 5)
-#endif
-
 #include "max31865.h"
 #include "max31865_params.h"
 #include "ztimer.h"
-#include "saul_reg.h"
 #include "log.h"
 
 #define MEASUREMENT_SLEEP_MS        (1000)
 #define MAX_LOOPS_MEAS              (3)
-
-/* supported acquisition modes */
-enum {
-    TEST_MAX31865_NORMAL_MODE,
-    TEST_MAX31865_SAUL_MODE
-} acqmode = TEST_MAX31865_NORMAL_MODE;
 
 void print_fault(max31865_fault_t value);
 
@@ -54,9 +36,6 @@ int main(void)
     max31865_t dev;
     max31865_data_t data;
     phydat_t phyTemp;
-    int cntMeas = 0;
-    saul_reg_t *saulDev = saul_reg;
-    phydat_t saulData;
 
     puts("MAX31865 RTD-to-Digital converter test application\n");
 
@@ -74,61 +53,19 @@ int main(void)
     max31865_clear_fault(&dev, &max31865_params[0], &cfgreg);
     LOG_DEBUG("%s() >> Config register readback = 0x%02X\n", __FUNCTION__, cfgreg);
 
-    puts("------------------------------");
-    puts("Switch to normal mode");
-
     /* periodically convert temperature values */
     while (1) {
         ztimer_sleep(ZTIMER_MSEC, MEASUREMENT_SLEEP_MS);
 
-        switch (acqmode) {
-            case TEST_MAX31865_NORMAL_MODE:
-                max31865_read(&dev, &data);
-                phyTemp.val[0] = data.rtd_temperature_cdegc;    /* unit: 0.01°C */
-                phyTemp.scale = -2;             /* 1 cdegC = 1e-02 degC */
-                phyTemp.unit = UNIT_TEMP_C;     /* set the unit */
-                phydat_dump(&phyTemp, 1);       /* print the value in a pretty format */
-                break;
-            case TEST_MAX31865_SAUL_MODE:
-                while (saulDev) {
-                    saul_reg_read(saulDev, &saulData);
-                    phydat_dump(&saulData, 1);
-                    saulDev = saulDev->next;
-                }
-                saulDev = saul_reg; /* reset pointer for the next read */
-                break;
-            default:
-                puts("No mode selected. Do nothing.");
-                continue;
-        }
+        max31865_read(&dev, &data);
+        phyTemp.val[0] = data.rtd_temperature_cdegc;    /* unit: 0.01°C */
+        phyTemp.scale = -2;             /* 1 cdegC = 1e-02 degC */
+        phyTemp.unit = UNIT_TEMP_C;     /* set the unit */
+        phydat_dump(&phyTemp, 1);       /* print the value in a pretty format */
 
         if (data.fault != MAX31865_FAULT_NO_FAULT) {
             print_fault(data.fault);
             max31865_clear_fault(&dev, &max31865_params[0], NULL);
-        }
-
-        /* Switch modes periodically: */
-        cntMeas++;
-        if (cntMeas == MAX_LOOPS_MEAS) {
-            cntMeas = 0;
-            acqmode++;
-            if (acqmode > TEST_MAX31865_SAUL_MODE) {
-                acqmode = TEST_MAX31865_NORMAL_MODE;
-            }
-            puts("------------------------------");
-            switch (acqmode) {
-                case TEST_MAX31865_NORMAL_MODE:
-                    puts("Switch to normal mode");
-                    break;
-                case TEST_MAX31865_SAUL_MODE:
-                    puts("Switch to SAUL mode");
-                    break;
-                default:
-                    acqmode = TEST_MAX31865_NORMAL_MODE;
-                    acqmode = TEST_MAX31865_NORMAL_MODE;
-                    puts("ERROR: unsupported mode");
-            }
-            puts("------------------------------");
         }
     }
     return 0;
@@ -137,21 +74,21 @@ int main(void)
 void print_fault(max31865_fault_t value)
 {
     switch (value) {
-        case MAX31865_FAULT_NO_FAULT:
-            break;
-        case MAX31865_FAULT_CIRCUIT:
-            puts("Fault: Short or open circuit");
-            break;
-        case MAX31865_FAULT_VOLTAGE:
-            puts("Fault: Under or over voltage");
-            break;
-        case MAX31865_FAULT_RTD_HIGH:
-            puts("Fault: Temperature too high");
-            break;
-        case MAX31865_FAULT_RTD_LOW:
-            puts("Fault: Temperature too low");
-            break;
-        default:
-            puts("Fault: Unknown");
+    case MAX31865_FAULT_NO_FAULT:
+        break;
+    case MAX31865_FAULT_CIRCUIT:
+        puts("Fault: Short or open circuit");
+        break;
+    case MAX31865_FAULT_VOLTAGE:
+        puts("Fault: Under or over voltage");
+        break;
+    case MAX31865_FAULT_RTD_HIGH:
+        puts("Fault: Temperature too high");
+        break;
+    case MAX31865_FAULT_RTD_LOW:
+        puts("Fault: Temperature too low");
+        break;
+    default:
+        puts("Fault: Unknown");
     }
 }

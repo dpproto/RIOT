@@ -23,8 +23,7 @@ extern "C" {
 #endif
 
 /** Number of lines in #max31865_lut_def */
-#define MAX31865_LUT_DEF        (86)
-
+#define MAX31865_LUT_DEF_NUMLINES        (ARRAY_SIZE(max31865_lut_def))
 /**
  * @ingroup drivers_max31865
  * @brief Default lookup table for temperature conversion

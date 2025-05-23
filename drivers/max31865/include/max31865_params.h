@@ -62,7 +62,7 @@ extern "C" {
             .temp_low_threshold = -19900, \
             .temp_high_threshold = 64900, \
             .lut = &max31865_lut_def, \
-            .lut_numlines = MAX31865_LUT_DEF, \
+            .lut_numlines = MAX31865_LUT_DEF_NUMLINES, \
 }
 #endif
 /**
